@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Scattering Words</title>
+	<style type="text/css">
+		html,body{
+			margin:0;
+			padding:0;
+			width:100%;
+			height:100%;
+			overflow:hidden;
+            background:#000;
+		},
+        canvas{
+            position:absolute;
+            top:0;
+            left:0;
+        }
+        #container{
+            position:absolute;
+            width:500px;
+            height:100px;
+            
+            left:0;
+            right:0;
+            bottom:0;
+            background:rgba(255,255,255,0.6);
+            margin:auto auto;
+            text-align:center;
+            padding: 20px;
+            padding-top:1%;
+            z-index:99999;
+        }
+#gamestart button,#gameover button{
+    display: inline-block;
+    padding: 0px 9px;
+    margin-right: 4px;
+    border-radius: 3px;
+    border: solid 1px #c0c0c0;
+    background: #e9e9e9;
+    box-shadow: inset 0px 1px 0px rgba(255,255,255, .8), 0px 1px 3px rgba(0,0,0, .1);
+    font-size: .875em;
+    font-weight: bold;
+    text-decoration: none;
+    color: #717171;
+    text-shadow: 0px 1px 0px rgba(255,255,255, 1);
+            margin-bottom:5px;
+        }
+#gamestart button:hover,#gameover button:hover{
+    background: #fefefe;
+    background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#FEFEFE), to(#f0f0f0));
+    background: -moz-linear-gradient(0% 0% 270deg,#FEFEFE, #f0f0f0);
+    cursor: pointer;
+}
+        #rtext{
+            width:60%;
+        }
+	</style>
+</head>
+<body>
+    
+<div id="container">
+     <div id="gamestart">
+         <p>
+             Write your text in the input below to create your animated text
+         </p>
+         <input type="text" id="rtext" value="RIAZ"> 
+         <button id="play" class="btn page">
+             Render
+         </button>
+        <p>
+             By Riaz Ali Laskar
+         </p>
+     </div>
+ </div>
+	<script type="text/javascript">
+
+window.requestAnimFrame = (function(callback) {
+    return window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function(callback) {
+                window.setTimeout(callback, 1000 / 60);
+            };
+})();
+        
+function deepCopy(obj) {
+    if (Object.prototype.toString.call(obj) === '[object Array]') {
+        var out = [], i = 0, len = obj.length;
+        for ( ; i < len; i++ ) {
+            out[i] = arguments.callee(obj[i]);
+        }
+        return out;
+    }
+    if (typeof obj === 'object') {
+        var out = {}, i;
+        for ( i in obj ) {
+            out[i] = arguments.callee(obj[i]);
+        }
+        return out;
+    }
+    return obj;
+}
+        
+        
+	window.onload = function(){
+		var canvas = document.createElement('canvas'),
+			height = canvas.height = window.innerHeight,
+			width  = canvas.width = window.innerWidth,
+			ctx = canvas.getContext('2d');
+		var canvas2 = document.createElement('canvas'),
+			height = canvas2.height = window.innerHeight,
+			width  = canvas2.width = window.innerWidth,
+			ctx2 = canvas2.getContext('2d');
+
+		var nofpoints = 100,
+			points = [],
+			length = 0,
+			speed = 0.04,
+			posArr = [],
+			posArrOrg = [],
+			counter = 0,
+            text = "RIAZ",
+            textArr = text.split(''),
+            renderingDone = false,
+            resetDots = false,
+            wait = true,
+            waitTime = 200;
+            ;
+        
+			document.body.appendChild(canvas);
+			document.body.appendChild(canvas2);
+
+			function Point()
+			{
+				this.x = Math.random()*width;
+				this.y = Math.random()*height;
+				this.vx = Math.random()*0.5;
+				this.vy = Math.random()*0.5;
+				this.radius = 3;
+                this.color = "#fff";
+			}
+
+			Point.prototype.draw = function(){
+                ctx.fillStyle = this.color;
+				ctx.arc(this.x,this.y,this.radius,0,Math.PI*2,false);
+			}
+
+			Point.prototype.distance = function(p){
+				return Math.sqrt((p.x-this.x)*(p.x-this.x) + (p.y-this.y)*(p.y-this.y));
+			}
+		
+
+            function renderText()
+            {
+                     points = [];
+			         posArr = [];
+			         posArrOrg = [];
+                     length = 0;
+			         counter = 0;
+                     renderingDone = false;
+                     resetDots = false;
+                     nofpoints = 100;
+                     Regx = /^\s+$/;
+                    var val = document.getElementById('rtext').value;
+                      if(!Regx.test(val) && val != '')
+                            text = document.getElementById('rtext').value;
+                    
+                    textArr = text.split('');
+                
+                            length = textArr.length;
+                            
+                            for (var z = 0; z < textArr.length; z++) {
+                                if(Regx.test(textArr[z]))
+                                {
+                                    continue;
+                                }
+                                var g = getLetterToPosArray(textArr[z]);
+                              posArr.push(g);
+                              posArrOrg.push(deepCopy(g));
+                            
+                              if(g.length > nofpoints)
+                              {
+                                  nofpoints = g.length;
+                              }
+                              
+                            }
+
+                            for (var i = 0; i < nofpoints; i++) {
+                                points.push(new Point());
+                            };
+
+            }
+       
+  function easeTo(current,target,ease){
+          var dx = target.x - current.x;   
+          var dy = target.y - current.y;   
+           current.x += dx * ease;
+           current.y += dy * ease;
+        if(Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001)
+        {
+            current.x = target.x;
+            current.y = target.y; 
+            
+                renderingDone = true;
+            
+        }
+    }
+
+  function easeOut(current,target,ease){
+          var dx = target.x - current.x;   
+          var dy = target.y - current.y;   
+           current.x += dx * ease;
+           current.y += dy * ease;
+        if(Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1)
+        {
+            renderingDone = false;
+            counter++;
+            if(counter >= length)
+            {
+                counter = 0;
+                posArr = [];
+                for(var i = 0; i < posArrOrg.length; i++)
+                {
+                    posArr.push(deepCopy(posArrOrg[i]));
+                }
+            }
+            
+            
+        }
+    } 
+
+   
+        function getLetterToPosArray(txt)
+        {
+                   var  arr = [];
+                        ctx2.font = '200px sans-serif';
+                        ctx2.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx2.fillStyle = 'red';
+                        ctx2.fillText(txt, width/2,height/2);
+
+
+                var data = ctx2.getImageData(0, 0, width,height);
+                     ctx2.clearRect(0,0,width,height);
+                var dataObj = data.data;
+                var index = 0
+
+
+                var scanDistance = 6;
+                var len = Math.floor(width/scanDistance) * Math.floor(height/scanDistance);
+
+                for(var i = 0;i < width;i = i + scanDistance) {
+
+                    for(var j = 0;j < height;j = j + scanDistance) {
+                        var point = j * width + i
+                        ,dataPoint = dataObj[point * 4];
+                        if(dataPoint) arr.push({
+                            x: i
+                            ,y: j
+                        });
+                    }
+
+                }
+            
+            return arr;
+        }
+            
+            
+     function renderLetter(arr)
+     {    
+         for (var j = 0; j < points.length; j++) {
+            ctx.beginPath();
+                           if(arr[j])
+                            {
+                                easeTo(points[j],arr[j],speed);
+                            }
+                            else
+                            {
+                                points[j].color = "#000";
+                            }
+                        
+                       
+                        points[j].draw();
+						ctx.fill();
+         }
+     }
+    
+    function renderLetterRev(arr)
+     {
+         for (var j = 0; j < arr.length; j++) {
+            ctx.beginPath();
+                           if(arr[j])
+                            {
+                                easeOut(points[j],arr[j],speed);
+                            }
+                            else
+                            {
+                                points[j].color = "#000";
+                            }
+                        
+                       
+                        points[j].draw();
+						ctx.fill();
+         }
+     }
+    
+    function scatterDots(arr)
+    {
+        for (var j = 0; j < points.length; j++) {
+                            if(arr[j])
+                            {
+                                arr[j].x = Math.random()*width
+                                arr[j].y = Math.random()*height
+                            }
+                            else
+                            {
+                                points[j].x  = Math.random()*width;
+                                points[j].y =  Math.random()*height;
+                            }
+                            points[j].color = "#fff";
+        }
+        resetDots = false;
+    }
+            
+        function render()
+		{
+
+
+				ctx.globalCompositeOperation = "source-over";
+				ctx.fillStyle = "rgba(0,0,0,0.3)";
+				ctx.fillRect(0,0,width,height);
+				
+				ctx.globalCompositeOperation = "lighter";
+				
+			    if(!renderingDone)
+                {
+                        renderLetter(posArr[counter]);
+                    
+                        resetDots = true;
+                    
+                }
+                else
+                {
+                   
+                    if(resetDots)
+                    {
+                        scatterDots(posArr[counter]);
+                    }
+                    else
+                    {
+                            renderLetterRev(posArr[counter]);
+                    }
+                    
+                }
+            
+				requestAnimFrame(render);
+                     
+		}
+		  renderText();
+            render();
+        
+ document.getElementById('play').addEventListener('click',renderText,false);
+	   		
+	}
+
+	</script>
+</body>
+</html>
